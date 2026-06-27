@@ -21,6 +21,7 @@ export function MainNavigator() {
   const tabBarHeight = useAdaptiveValue(60, 72)
   const iconSize = useAdaptiveValue(24, 30)
   const labelFontSize = useResponsiveFontSize(12, 14)
+  const tabBarPaddingTop = useAdaptiveValue(8, 12)
   const bottomPadding = Math.max(insets.bottom, useAdaptiveValue(8, 12))
 
   return (
@@ -32,7 +33,7 @@ export function MainNavigator() {
           borderTopColor: colors.border,
           height: tabBarHeight + bottomPadding,
           paddingBottom: bottomPadding,
-          paddingTop: useAdaptiveValue(8, 12),
+          paddingTop: tabBarPaddingTop,
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,

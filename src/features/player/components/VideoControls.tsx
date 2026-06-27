@@ -7,14 +7,12 @@ import {
   PanResponder,
   GestureResponderEvent,
   PanResponderGestureState,
-  Dimensions,
+  useWindowDimensions,
   Platform
 } from 'react-native'
 import { colors, spacing } from '../../../shared/theme'
 import { formatTime } from '../../../shared/utils/format'
 import * as Brightness from 'expo-brightness'
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
 
 interface VideoControlsProps {
   currentTime: number
@@ -55,6 +53,7 @@ export function VideoControls({
   onQualityPress,
   quality
 }: VideoControlsProps) {
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions()
   const [isDragging, setIsDragging] = useState(false)
   const [dragProgress, setDragProgress] = useState(0)
   const [showBrightness, setShowBrightness] = useState(false)
@@ -132,7 +131,7 @@ export function VideoControls({
   const handleDoubleTap = (event: GestureResponderEvent) => {
     const now = Date.now()
     const { locationX } = event.nativeEvent
-    
+
     if (now - lastTap.current < 300) {
       if (locationX < SCREEN_WIDTH / 2) {
         const newTime = Math.max(0, currentTime - 10)
@@ -364,7 +363,7 @@ const styles = StyleSheet.create({
     left: 0,
     top: 80,
     bottom: 120,
-    width: SCREEN_WIDTH * 0.3,
+    width: '30%',
     backgroundColor: 'transparent'
   },
   rightGestureArea: {
@@ -372,7 +371,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: 80,
     bottom: 120,
-    width: SCREEN_WIDTH * 0.3,
+    width: '30%',
     backgroundColor: 'transparent'
   },
   brightnessIndicator: {

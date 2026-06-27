@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Alert, ScrollView, Platform } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Alert, ScrollView, useWindowDimensions } from 'react-native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { RouteProp } from '@react-navigation/native'
 import { VideoRef } from 'react-native-video'
@@ -10,8 +10,6 @@ import { colors, spacing } from '../../../shared/theme'
 import { useHistoryStore } from '../../../shared/stores'
 import { parserService } from '../../../shared/services/parser'
 import { API_CONFIG } from '../../../config/api'
-import { useOrientationChange } from '../../../shared/hooks'
-import * as ScreenOrientation from 'expo-screen-orientation'
 
 type RootStackParamList = {
   Main: undefined
@@ -36,9 +34,12 @@ export function PlayerScreen({ navigation, route }: PlayerScreenProps) {
   const seekingRef = useRef(false)
   const [playerReady, setPlayerReady] = useState(false)
   const [loadingEpisode, setLoadingEpisode] = useState(false)
-  const isLandscape = useOrientationChange()
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [sourceType, setSourceType] = useState<'url' | 'm3u8url'>('url')
+
+  // 使用 useWindowDimensions 检测当前方向，比 useOrientationChange 更稳定
+  const { width, height } = useWindowDimensions()
+  const isLandscape = width > height
 
   const {
     playing,
@@ -58,11 +59,6 @@ export function PlayerScreen({ navigation, route }: PlayerScreenProps) {
 
   useEffect(() => {
     loadRecords()
-    
-    // 组件卸载时恢复屏幕方向
-    return () => {
-      ScreenOrientation.unlockAsync()
-    }
   }, [loadRecords])
 
   const loadEpisodes = useCallback(async () => {
@@ -284,16 +280,9 @@ export function PlayerScreen({ navigation, route }: PlayerScreenProps) {
     setShowQualitySelector(true)
   }
 
-  const handleFullScreen = async () => {
-    if (isLandscape) {
-      // 横屏时，退出全屏
-      setIsFullScreen(false)
-      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP)
-    } else {
-      // 竖屏时，进入全屏
-      setIsFullScreen(true)
-      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
-    }
+  const handleFullScreen = () => {
+    // 切换全屏状态，让系统自动处理屏幕方向
+    setIsFullScreen(!isFullScreen)
   }
 
   const handleSourceTypeChange = () => {
