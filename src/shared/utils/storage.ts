@@ -60,6 +60,22 @@ export const storage = {
     await this.set(STORAGE_KEYS.PLAY_PROGRESS, progress)
   },
 
+  async getPlayQueue<T>(): Promise<T | null> {
+    return await this.get<T>(STORAGE_KEYS.PLAY_QUEUE)
+  },
+
+  async setPlayQueue<T>(queue: T): Promise<void> {
+    await this.set(STORAGE_KEYS.PLAY_QUEUE, queue)
+  },
+
+  async getPlayQueueIndex(): Promise<number | null> {
+    return await this.get<number>(STORAGE_KEYS.PLAY_QUEUE_INDEX)
+  },
+
+  async setPlayQueueIndex(index: number): Promise<void> {
+    await this.set(STORAGE_KEYS.PLAY_QUEUE_INDEX, index)
+  },
+
   async getSettings(): Promise<any> {
     return await this.get(STORAGE_KEYS.SETTINGS)
   },

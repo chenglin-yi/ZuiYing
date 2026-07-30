@@ -1,5 +1,7 @@
 export interface Movie {
   id: string
+  /** ID returned by the playback provider; distinct from the catalogue ID. */
+  playId?: string
   title: string
   poster_path: string
   backdrop_path: string
@@ -62,6 +64,28 @@ export interface HistoryRecord {
   episode: number
   progress: number
   duration: number
+  updatedAt: number
+}
+
+/** 播放队列中的单集项 */
+export interface QueueItem {
+  id: string
+  movieId: string
+  movie: Pick<Movie, 'id' | 'title' | 'poster_path'>
+  episode: number
+  episodeName: string
+  sourceType: 'url' | 'm3u8url'
+  quality: string
+  url?: string
+  m3u8url?: string
+}
+
+/** 用户保存的播单 */
+export interface Playlist {
+  id: string
+  name: string
+  items: QueueItem[]
+  createdAt: number
   updatedAt: number
 }
 

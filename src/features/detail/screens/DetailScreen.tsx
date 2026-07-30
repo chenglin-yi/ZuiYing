@@ -3,8 +3,8 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'rea
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { RouteProp } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useMovieStore, useFavoriteStore, useHistoryStore } from '../../../shared/stores'
-import { Movie, PlaySource, Episode } from '../../../shared/types/movie'
+import { useMovieStore, useFavoriteStore, useHistoryStore, usePlaylistStore } from '../../../shared/stores'
+import { Movie, PlaySource, Episode, QueueItem } from '../../../shared/types/movie'
 import { MovieHeader, PlaySourceList, EpisodeList } from '../components'
 import { Loading, Error } from '../../../shared/components'
 import { colors, spacing } from '../../../shared/theme'
@@ -15,7 +15,7 @@ import { useAdaptiveValue, useResponsivePadding } from '../../../shared/utils/re
 type RootStackParamList = {
   Main: undefined
   Detail: { movieId: string; movie?: Movie }
-  Player: { movieId: string; movie?: Movie; episode?: number; url?: string }
+  Player: { movieId: string; movie?: Movie; episode?: number; url?: string; episodes?: Episode[] }
 }
 
 interface DetailScreenProps {
@@ -41,6 +41,7 @@ export function DetailScreen({ navigation, route }: DetailScreenProps) {
 
   const { addFavorite, removeFavorite, isFavorite } = useFavoriteStore()
   const { addRecord } = useHistoryStore()
+  const { setQueue } = usePlaylistStore()
   const { fetchPopularMovies, fetchPopularTVs } = useMovieStore()
 
   const loadDetail = useCallback(async () => {
@@ -63,47 +64,57 @@ export function DetailScreen({ navigation, route }: DetailScreenProps) {
       }
 
       // 使用movie ID获取播放源
-      const movieIdNum = resolved?.id || ''
+      // Yaohu V5 locates a film by title and selection number; passing an id
+      // parameter makes the service reject the request.
+      const movieName = resolved?.title?.trim() || ''
+      const hasValidId = Boolean(movieName)
       
-      // 获取详情数据（包含intro和episodes）
-      const detailUrl = `${API_CONFIG.YAOHU_BASE_URL}/yingshi?key=${API_CONFIG.YAOHU_API_KEY}&msg=${encodeURIComponent(resolved?.title || '')}&id=${movieIdNum}&n=1`
-      console.log('获取详情:', detailUrl)
-      
-      try {
-        const response = await fetch(detailUrl)
-        const text = await response.text()
-        const json = JSON.parse(text)
+      // 获取详情数据（包含intro和episodes）- 仅当 movieId 有效时请求
+      if (hasValidId) {
+        const detailUrl = `${API_CONFIG.YAOHU_BASE_URL}/yingshi?key=${API_CONFIG.YAOHU_API_KEY}&msg=${encodeURIComponent(movieName)}&n=1`
+        console.log('获取详情:', detailUrl)
         
-        if (json.code === 200 && json.data) {
-          // 设置简介
-          if (json.data.intro || json.data.blurb) {
-            setMovieIntro(json.data.intro || json.data.blurb || '')
-          }
+        try {
+          const response = await fetch(detailUrl)
+          const text = await response.text()
+          const json = JSON.parse(text)
           
-          // 设置剧集列表
-          if (json.data.episodes && Array.isArray(json.data.episodes)) {
-            const realEpisodes: Episode[] = json.data.episodes.map((ep: any, idx: number) => ({
-              id: String(idx + 1),
-              name: ep.title || `第${idx + 1}集`,
-              number: parseInt(ep.title?.match(/第(\d+)集/)?.[1] || '0') || idx + 1,
-              still_path: '',
-              overview: '',
-              url: ep.url || '',
-              m3u8url: ep.m3u8url || ''
-            }))
-            setEpisodes(realEpisodes)
+          if (json.code === 200 && json.data) {
+            // 设置简介
+            if (json.data.intro || json.data.blurb) {
+              setMovieIntro(json.data.intro || json.data.blurb || '')
+            }
+            
+            // 设置剧集列表
+            if (json.data.episodes && Array.isArray(json.data.episodes)) {
+              const realEpisodes: Episode[] = json.data.episodes.map((ep: any, idx: number) => ({
+                id: String(idx + 1),
+                name: ep.title || `第${idx + 1}集`,
+                number: parseInt(ep.title?.match(/第(\d+)集/)?.[1] || '0') || idx + 1,
+                still_path: '',
+                overview: '',
+                url: ep.url || '',
+                m3u8url: ep.m3u8url || ''
+              }))
+              setEpisodes(realEpisodes)
+            }
           }
+        } catch (e) {
+          console.error('获取详情失败:', e)
         }
-      } catch (e) {
-        console.error('获取详情失败:', e)
-      }
 
-      // 获取播放源列表
-      const sources = await parserService.getPlaySources(resolved?.title || '', movieIdNum)
-      if (sources.length > 0) {
-        setPlaySources(sources)
-        setSelectedSource(sources[0].id)
+        // 获取播放源列表
+        const sources = await parserService.getPlaySources(movieName)
+        if (sources.length > 0) {
+          setPlaySources(sources)
+          setSelectedSource(sources[0].id)
+        } else {
+          setPlaySources([{ id: '1', name: '点击获取播放链接', url: '', quality: '720p', selected: true }])
+          setSelectedSource('1')
+        }
       } else {
+        // movieId 无效，设置默认播放源
+        console.warn('影片标题为空，跳过详情请求')
         setPlaySources([{ id: '1', name: '点击获取播放链接', url: '', quality: '720p', selected: true }])
         setSelectedSource('1')
       }
@@ -129,9 +140,27 @@ export function DetailScreen({ navigation, route }: DetailScreenProps) {
     }
   }
 
+  const buildQueueItems = (startEpisodeNumber: number): QueueItem[] => {
+    if (!movie) return []
+    const sorted = [...episodes].sort((a, b) => a.number - b.number)
+    const startIdx = sorted.findIndex((ep) => ep.number === startEpisodeNumber)
+    const queueEpisodes = startIdx >= 0 ? sorted.slice(startIdx) : sorted
+
+    return queueEpisodes.map((ep) => ({
+      id: `${movie.id}-${ep.number}`,
+      movieId: movie.id,
+      movie: { id: movie.id, title: movie.title, poster_path: movie.poster_path },
+      episode: ep.number,
+      episodeName: ep.name,
+      sourceType: 'url' as const,
+      quality: '720p',
+      url: ep.url,
+      m3u8url: ep.m3u8url,
+    }))
+  }
+
   const handlePlay = async () => {
     if (!movie) return
-    
     const source = playSources.find(s => s.id === selectedSource)
     if (!source) {
       Alert.alert('请选择播放源')
@@ -146,12 +175,13 @@ export function DetailScreen({ navigation, route }: DetailScreenProps) {
     } else if (source.url) {
       playUrl = source.url
     } else {
-      // 如果没有播放链接，需要获取
-      Alert.alert('正在获取播放链接...')
+      // 如果没有播放链接，需要实时获取
+      setLoading(true)
       const movieIdNum = movie.id
       const playInfo = await parserService.getPlayUrlById(movieIdNum, selectedEpisode, movie.title)
       playUrl = playInfo.url
-      
+      setLoading(false)
+
       if (!playUrl) {
         Alert.alert('获取播放链接失败，请重试')
         return
@@ -159,12 +189,61 @@ export function DetailScreen({ navigation, route }: DetailScreenProps) {
     }
 
     addRecord(movie, selectedEpisode)
-    
+
     navigation.navigate('Player', {
       movieId: movie.id,
       movie: movie,
       episode: selectedEpisode,
-      url: playUrl
+      url: playUrl,
+      episodes: episodes.length > 0 ? episodes : undefined,
+    })
+  }
+
+  const handlePlayAll = async () => {
+    if (!movie || episodes.length === 0) {
+      Alert.alert('提示', '暂无剧集信息')
+      return
+    }
+    const sorted = [...episodes].sort((a, b) => a.number - b.number)
+    const first = sorted[0]
+    const playUrl = first?.url || ''
+
+    const queue = buildQueueItems(first.number)
+    setQueue(queue, 0)
+    addRecord(movie, first.number)
+
+    navigation.navigate('Player', {
+      movieId: movie.id,
+      movie: movie,
+      episode: first.number,
+      url: playUrl,
+      episodes: episodes,
+    })
+  }
+
+  const handlePlayFromHere = async () => {
+    if (!movie) return
+    const currentEpisode = episodes.find(ep => ep.number === selectedEpisode)
+    let playUrl = currentEpisode?.url || ''
+    if (!playUrl) {
+      const playInfo = await parserService.getPlayUrlById(movie.id, selectedEpisode, movie.title)
+      playUrl = playInfo.url
+    }
+    if (!playUrl) {
+      Alert.alert('获取播放链接失败，请重试')
+      return
+    }
+
+    const queue = buildQueueItems(selectedEpisode)
+    setQueue(queue, 0)
+    addRecord(movie, selectedEpisode)
+
+    navigation.navigate('Player', {
+      movieId: movie.id,
+      movie: movie,
+      episode: selectedEpisode,
+      url: playUrl,
+      episodes: episodes,
     })
   }
 
@@ -210,6 +289,23 @@ export function DetailScreen({ navigation, route }: DetailScreenProps) {
             <Text style={[styles.actionText, styles.playText]}>▶️ 播放</Text>
           </TouchableOpacity>
         </View>
+
+        {episodes.length > 0 && (
+          <View style={[styles.queueActions, { paddingHorizontal: horizontalPadding }]}>
+            <TouchableOpacity
+              style={[styles.queueButton, styles.queueButtonPrimary]}
+              onPress={handlePlayAll}
+            >
+              <Text style={[styles.queueButtonText, styles.queueButtonTextPrimary]}>播放全部</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.queueButton}
+              onPress={handlePlayFromHere}
+            >
+              <Text style={styles.queueButtonText}>从第 {selectedEpisode} 集播放</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={[styles.section, { paddingHorizontal: horizontalPadding }]}>
           <Text style={styles.sectionTitle}>简介</Text>
@@ -287,6 +383,31 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   playText: {
+    color: '#FFFFFF',
+  },
+  queueActions: {
+    flexDirection: 'row',
+    paddingVertical: spacing.sm,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  queueButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    marginHorizontal: spacing.xs,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+  },
+  queueButtonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  queueButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  queueButtonTextPrimary: {
     color: '#FFFFFF',
   },
   section: {

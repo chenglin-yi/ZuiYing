@@ -25,6 +25,13 @@ interface VideoControlsProps {
   onSourceTypeChange?: () => void
   sourceType?: 'url' | 'm3u8url'
   onBack?: () => void
+  onNextEpisode?: () => void
+  onEpisodeListPress?: () => void
+  onQueuePress?: () => void
+  onSpeedPress?: () => void
+  onSettingsPress?: () => void
+  queueLength?: number
+  rate?: number
   title?: string
   episode?: number
   showControls: boolean
@@ -45,6 +52,13 @@ export function VideoControls({
   onSourceTypeChange,
   sourceType,
   onBack,
+  onNextEpisode,
+  onEpisodeListPress,
+  onQueuePress,
+  onSpeedPress,
+  onSettingsPress,
+  queueLength,
+  rate,
   title,
   episode,
   showControls,
@@ -218,6 +232,16 @@ export function VideoControls({
             <Text style={styles.sourceText}>{sourceType === 'url' ? '线路1' : '线路2'}</Text>
           </TouchableOpacity>
         )}
+        {onQueuePress && (
+          <TouchableOpacity style={styles.topButton} onPress={onQueuePress}>
+            <Text style={styles.topButtonText}>📋 {queueLength || 0}</Text>
+          </TouchableOpacity>
+        )}
+        {onSettingsPress && (
+          <TouchableOpacity style={styles.topButton} onPress={onSettingsPress}>
+            <Text style={styles.topButtonText}>⚙️</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.leftGestureArea} {...leftPanResponder.panHandlers} />
@@ -274,15 +298,29 @@ export function VideoControls({
             <Text style={styles.playIcon}>{playing ? '⏸' : '▶️'}</Text>
           </TouchableOpacity>
           
+          {onSpeedPress && (
+            <TouchableOpacity style={styles.speedButton} onPress={onSpeedPress}>
+              <Text style={styles.speedText}>{rate ? `${rate}x` : '1.0x'}</Text>
+            </TouchableOpacity>
+          )}
+
           {onQualityPress && (
             <TouchableOpacity style={styles.qualityButton} onPress={onQualityPress}>
               <Text style={styles.qualityText}>{quality || '720p'}</Text>
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity style={styles.nextButton}>
-            <Text style={styles.nextIcon}>⏭</Text>
-          </TouchableOpacity>
+          {onEpisodeListPress && (
+            <TouchableOpacity style={styles.episodeListButton} onPress={onEpisodeListPress}>
+              <Text style={styles.episodeListIcon}>📋</Text>
+            </TouchableOpacity>
+          )}
+
+          {onNextEpisode && (
+            <TouchableOpacity style={styles.nextButton} onPress={onNextEpisode}>
+              <Text style={styles.nextIcon}>⏭</Text>
+            </TouchableOpacity>
+          )}
 
           {onFullScreen && (
             <TouchableOpacity style={styles.fullScreenButton} onPress={onFullScreen}>
@@ -320,10 +358,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xl,
     paddingBottom: spacing.md,
-    backgroundColor: 'transparent',
-    backgroundGradient: {
-      colors: ['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.4)', 'transparent']
-    }
+    backgroundColor: 'transparent'
   },
   backButton: {
     padding: spacing.sm,
@@ -357,6 +392,17 @@ const styles = StyleSheet.create({
   sourceText: {
     fontSize: 12,
     color: '#FFFFFF'
+  },
+  topButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 12,
+    marginLeft: spacing.sm,
+  },
+  topButtonText: {
+    fontSize: 12,
+    color: '#FFFFFF',
   },
   leftGestureArea: {
     position: 'absolute',
@@ -434,10 +480,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.xl,
     paddingTop: spacing.md,
-    backgroundColor: 'transparent',
-    backgroundGradient: {
-      colors: ['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']
-    }
+    backgroundColor: 'transparent'
   },
   timeContainer: {
     flexDirection: 'row',
@@ -508,6 +551,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#FFFFFF'
   },
+  episodeListButton: {
+    padding: spacing.sm
+  },
+  episodeListIcon: {
+    fontSize: 18,
+    color: '#FFFFFF'
+  },
   fullScreenButton: {
     padding: spacing.sm
   },
@@ -523,6 +573,17 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.sm
   },
   qualityText: {
+    fontSize: 12,
+    color: '#FFFFFF'
+  },
+  speedButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    marginHorizontal: spacing.sm
+  },
+  speedText: {
     fontSize: 12,
     color: '#FFFFFF'
   }

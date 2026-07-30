@@ -10,7 +10,14 @@ interface SettingsState {
 
 const defaultSettings: Settings = {
   theme: 'light',
-  playSpeed: 1.0
+  playSpeed: 1.0,
+
+  autoPlayNext: true,
+  autoPlayCountdownSeconds: 5,
+
+  skipIntroOutro: false,
+  skipIntroEnd: 90,
+  skipOutroSeconds: 120,
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
