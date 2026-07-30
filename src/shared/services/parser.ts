@@ -43,15 +43,20 @@ export interface YaohuMovie {
   remarks: string
 }
 
-async function fetchWithTimeout(url: string, timeout = 10000): Promise<Response> {
+async function fetchWithTimeout(url: string, timeout = 15000): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeout)
-  
+
   try {
     const response = await fetch(url, { signal: controller.signal })
-    return response
-  } finally {
     clearTimeout(timer)
+    return response
+  } catch (error: any) {
+    clearTimeout(timer)
+    if (error.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络连接')
+    }
+    throw error
   }
 }
 
@@ -107,10 +112,12 @@ export const parserService = {
   },
 
   // 获取播放链接（根据ID和序号）
-  async getPlayUrlById(id: string, index: number, movieName?: string, quality?: string): Promise<{ url: string; name: string }> {
+  async getPlayUrlById(_id: string, index: number, movieName?: string, quality?: string): Promise<{ url: string; name: string }> {
     try {
       // 需要同时传id和n才能获取播放链接
-      let url = `${API_CONFIG.YAOHU_BASE_URL}/yingshi?key=${API_CONFIG.YAOHU_API_KEY}&msg=${encodeURIComponent(movieName || '')}&id=${id}&n=${index}`
+      // Yaohu V5 does not accept an `id` parameter. It identifies the result
+      // by the search text and selection number only.
+      let url = `${API_CONFIG.YAOHU_BASE_URL}/yingshi?key=${API_CONFIG.YAOHU_API_KEY}&msg=${encodeURIComponent(movieName || '')}&n=${index}`
       if (quality) {
         url += `&quality=${quality}`
       }
@@ -174,7 +181,7 @@ export const parserService = {
   async getPlaySources(movieName: string, movieId?: string): Promise<PlaySource[]> {
     // 如果有movieId，直接获取播放链接
     if (movieId) {
-      const url = `${API_CONFIG.YAOHU_BASE_URL}/yingshi?key=${API_CONFIG.YAOHU_API_KEY}&msg=${encodeURIComponent(movieName || '')}&id=${movieId}&n=1`
+      const url = `${API_CONFIG.YAOHU_BASE_URL}/yingshi?key=${API_CONFIG.YAOHU_API_KEY}&msg=${encodeURIComponent(movieName || '')}&n=1`
       console.log('获取播放源列表:', url)
       
       try {

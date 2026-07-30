@@ -1,13 +1,13 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Keyboard, SafeAreaView, ScrollView, Alert } from 'react-native'
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Keyboard, SafeAreaView, ScrollView } from 'react-native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useSearchStore } from '../../../shared/stores'
 import { useDebounce } from '../../../shared/hooks'
 import { Movie } from '../../../shared/types/movie'
+import { RootStackParamList } from '../../../app/navigation/types'
 import { SearchBar, SearchResult } from '../components'
 import { Loading, Empty } from '../../../shared/components'
 import { colors, spacing } from '../../../shared/theme'
-import { parserService } from '../../../shared/services/parser'
 import { useResponsivePadding, useAdaptiveValue } from '../../../shared/utils/responsive'
 
 type CategoryType = 'all' | 'movie' | 'tv' | 'animation'
@@ -18,12 +18,6 @@ const CATEGORIES: { key: CategoryType; label: string }[] = [
   { key: 'tv', label: '电视剧' },
   { key: 'animation', label: '动漫' }
 ]
-
-type RootStackParamList = {
-  Main: undefined
-  Detail: { movieId: string; movie?: Movie }
-  Player: { movieId: string; episode?: number }
-}
 
 interface SearchScreenProps {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Main'>
@@ -92,24 +86,11 @@ export function SearchScreen({ navigation }: SearchScreenProps) {
     handleSearch(keyword, true)
   }
 
-  const handleMoviePress = async (movie: Movie) => {
-    try {
-      // 获取播放链接
-      const playInfo = await parserService.getPlayUrlById(movie.id, 1, movie.title)
-      if (playInfo.url) {
-        navigation.navigate('Player', {
-          movieId: movie.id,
-          movie: movie,
-          episode: 1,
-          url: playInfo.url
-        })
-      } else {
-        Alert.alert('播放失败', '无法获取播放链接')
-      }
-    } catch (error) {
-      console.error('获取播放链接失败:', error)
-      Alert.alert('播放失败', '获取播放链接时出错')
-    }
+  const handleMoviePress = (movie: Movie) => {
+    navigation.navigate('Detail', {
+      movieId: movie.id,
+      movie: movie,
+    })
   }
 
   const trimmedDebounced = debouncedValue.trim()

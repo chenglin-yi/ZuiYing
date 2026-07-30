@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react'
-import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity, Alert } from 'react-native'
+import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useMovieStore } from '../../../shared/stores'
@@ -7,7 +7,6 @@ import { Movie } from '../../../shared/types/movie'
 import { MovieCard } from '../components'
 import { Loading, Empty, Error } from '../../../shared/components'
 import { colors, spacing } from '../../../shared/theme'
-import { parserService } from '../../../shared/services/parser'
 import { useHeaderPadding, useGridColumns, useResponsivePadding } from '../../../shared/utils/responsive'
 
 type RootStackParamList = {
@@ -53,23 +52,11 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
     setRefreshing(false)
   }
 
-  const handleMoviePress = async (movie: Movie) => {
-    try {
-      const playInfo = await parserService.getPlayUrlById(movie.id, 1, movie.title)
-      if (playInfo.url) {
-        navigation.navigate('Player', {
-          movieId: movie.id,
-          movie: movie,
-          episode: 1,
-          url: playInfo.url
-        })
-      } else {
-        Alert.alert('播放失败', '无法获取播放链接')
-      }
-    } catch (err) {
-      console.error('获取播放链接失败:', err)
-      Alert.alert('播放失败', '获取播放链接时出错')
-    }
+  const handleMoviePress = (movie: Movie) => {
+    navigation.navigate('Detail', {
+      movieId: movie.id,
+      movie: movie,
+    })
   }
 
   const handleSearchPress = () => {

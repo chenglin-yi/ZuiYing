@@ -16,19 +16,30 @@ export function RootNavigator() {
         contentStyle: { backgroundColor: colors.background }
       }}
     >
-      <Stack.Screen name="Main" component={MainNavigator} />
-      <Stack.Screen 
-        name="Detail" 
-        component={DetailScreen}
+      <Stack.Screen
+        name="Main"
+        component={MainNavigator}
         options={{
-          animation: 'slide_from_right'
+          orientation: 'portrait'
         }}
       />
-      <Stack.Screen 
-        name="Player" 
+      <Stack.Screen
+        name="Detail"
+        component={DetailScreen}
+        options={{
+          animation: 'slide_from_right',
+          orientation: 'portrait'
+        }}
+      />
+      <Stack.Screen
+        name="Player"
         component={PlayerScreen}
         options={{
-          animation: 'fade'
+          animation: 'fade',
+          orientation: 'portrait',
+          // 注意：不再在这里强制 screenOrientation，改由播放页通过
+          // expo-screen-orientation 动态控制，避免与 react-native-screens
+          // 冲突导致旋转时闪退（expo issue #45479 类似场景）。
         }}
       />
     </Stack.Navigator>
