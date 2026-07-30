@@ -3,7 +3,7 @@
     "name": "追影",
     "slug": "ZuiYing",
     "version": "1.0.0",
-    "orientation": "default",
+    "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
@@ -22,7 +22,13 @@
       ]
     },
     "plugins": [
-      "expo-av"
+      "expo-av",
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "DEFAULT"
+        }
+      ]
     ],
     "extra": {
       "eas": {
